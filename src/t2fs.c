@@ -327,7 +327,22 @@ int truncate2 (FILE2 handle) {
 Função:	Altera o contador de posição (current pointer) do arquivo.
 -----------------------------------------------------------------------------*/
 int seek2 (FILE2 handle, DWORD offset) {
-	return -1;
+	initializeEverything();
+
+	if(filesMap[handle] == 0){
+		return ERRO;
+	}
+
+	t_entradaDir *diretorio = opened_files[handle].
+
+
+	if((int) offset > (int) diretorio->fileSize || (int) offset < -1) return ERRO;
+
+	if(offset == -1) opened_files[handle].currentPoint = diretorio->fileSize;
+	else opened_files[handle].currentPoint = offset;
+
+
+	return SUCESSO;
 }
 
 /*-----------------------------------------------------------------------------
