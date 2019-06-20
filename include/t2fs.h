@@ -89,6 +89,8 @@ t_entradaDir* getLastDirectory(char* caminho);
 t_MBR readsMBR();
 t_SUPERBLOCO readsSuperblock();
 
+int tam_cluster;
+
 void initializeEverything();
 int initializeFAT();
 int initializeRoot();
