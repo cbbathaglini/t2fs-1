@@ -387,6 +387,7 @@ DIR2 opendir2 (char *pathname) {
 	handle = freeHandle();
 	openedFiles[handle] = arquivoAberto;
 	filesMap[handle]=1;
+	return SUCESSO;
 
 }
 
