@@ -166,7 +166,67 @@ Função:	Função usada para criar um novo arquivo no disco e abrí-lo,
 		assumirá um tamanho de zero bytes.
 -----------------------------------------------------------------------------*/
 FILE2 create2 (char *filename) {
-	return -1;
+	initializeEverything();
+	int i=0;
+
+	t_entradaDir* diretorio = getLastDirectory(filename);
+
+	int handle = 0;
+	char *nome = fileName(filename);
+
+	//Se já existe:
+	for(i=0;i<entradasPorDir;i++){
+		if(strncmp(nome,diretorio[i].name,strlen(nome)) ==0 ){
+			printf("Arquivo já existente\n");
+			return ERRO;
+		}
+	}
+
+	//Encontra local no diretorio pra colocar
+	i=0;
+
+	while(diretorio[i].fileType != FILETYPE_INV){
+		i++;
+	}
+
+	if(i>entradasPorDir){
+		printf("Diretório cheio\n");
+		return ERRO;
+	}
+
+	//CRIAÇÃO DA ENTRADA DE DIRETÓRIO DO NOVO ARQUIVO
+	t_entradaDir novaentrada;
+	novaentrada.fileType = FILETYPE_ARQ;
+	strcpy(novaentrada.name,nome);
+	novaentrada.fileSize = SECTOR_SIZE * superbloco.setoresPorBloco;
+	novaentrada.firstBlock = firstBitmapEmpty();
+
+	fat[novaentrada.firstBlock] = FEOF;
+	bitmap[novaentrada.firstBlock]=1;
+
+	diretorio[i] = novaentrada;
+
+	int teste = writeFAT();		//SEMPRE gravar FAT e Bitmap ao criar coisas novas
+	updatesBitmap();
+
+	if(teste != 0){
+		printf("FAT não pode ser atualizada\n");
+	}
+
+	if(writeBlock((BYTE*) diretorio,diretorio[0].firstBlock,superbloco.blocoDirRaiz,superbloco.setoresPorBloco ) != SUCESSO ){
+		printf("Erro ao gravar no disco\n");
+		return ERRO;
+	}
+
+	handle = open2(filename);
+	if(handle==ERRO){
+		return ERRO;
+	}
+
+	printf("Arquivo criado corretamente!\n");
+	return SUCESSO;
+
+
 }
 
 /*-----------------------------------------------------------------------------
@@ -180,7 +240,43 @@ int delete2 (char *filename) {
 Função:	Função que abre um arquivo existente no disco.
 -----------------------------------------------------------------------------*/
 FILE2 open2 (char *filename) {
-	return -1;
+	
+	initializeEverything();
+
+	int handle;
+
+	if(opened_files==10){
+		printf("Limite máximo de arquivos aberto\n");
+		return ERRO;
+	}
+
+	t_entradaDir* entradaAberta;
+
+	if( (entradaAberta = abrirArquivo(filename)) == NULL ){
+		return ERRO;
+	}
+
+	if(entradaAberta->fileType != FILETYPE_ARQ){
+		printf("Não é um arquivo\n");
+		return ERRO;
+	}
+	//Pega diretório pai
+	t_entradaDir *pai = getLastDirectory(filename);
+
+	opened_files++;
+
+	t_openedFile arquivoAberto;
+	arquivoAberto.currentPoint = 0;
+	arquivoAberto.registro=entradaAberta;
+	arquivoAberto.blocoPai = pai[0].firstBlock;
+
+	handle=freeHandle();
+
+	openedFiles[handle] = arquivoAberto;
+	filesMap[handle] = 1;
+
+	return SUCESSO;
+
 }
 
 /*-----------------------------------------------------------------------------
@@ -387,8 +483,8 @@ DIR2 opendir2 (char *pathname) {
 	handle = freeHandle();
 	openedFiles[handle] = arquivoAberto;
 	filesMap[handle]=1;
-	return SUCESSO;
 
+	return SUCESSO;
 }
 
 /*-----------------------------------------------------------------------------
@@ -962,6 +1058,7 @@ void updatesBitmap(){
 	}
 
 }
+
 int validEntry(BYTE filetype){
 
 	if(filetype==FILETYPE_DIR || filetype == FILETYPE_ARQ || filetype == FILETYPE_LINK){
